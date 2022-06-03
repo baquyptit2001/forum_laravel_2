@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Account\SignupRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -19,18 +20,27 @@ class AuthController extends Controller
         if (Auth::attempt($credentials)) {
             $user = User::where('email', $request->email)->first();
             $token = $user->createToken('authtoken')->plainTextToken;
-            return response()->json(['token' => $token, 'user' => UserResource::make($user)], 200);
+            return response()->json(['token' => $token, 'user' => UserResource::make($user), 'message' => 'Đăng nhập thành công'], 200);
         } else {
-            return response()->json(['error' => 'Unauthorised'], 401);
+            return response()->json(['error' => 'Tài khoản hoặc mật khẩu không đúng'], 401);
         }
     }
 
     public function logout(Request $request)
     {
-        $request->user()->token()->revoke();
-        return response()->json([
-            'message' => 'Successfully logged out'
-        ]);
+        try {
+            $request->user()->tokens()->delete();
+            return response()->json([
+                'status_code' => 200,
+                'message' => 'Đăng xuất thành công'
+            ]);
+        } catch (Exception $error) {
+            return response()->json([
+                'status_code' => 500,
+                'message' => 'Đăng xuất thất bại',
+                'error' => $error,
+            ]);
+        }
     }
 
     public function user(Request $request)
